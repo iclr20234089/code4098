@@ -5,18 +5,23 @@ from torch import nn
 
 from .encoders import EncoderFactory
 from .q_functions import QFunctionFactory
+from .V_functions import VFunctionFactory
 from .torch import (
     CategoricalPolicy,
     ConditionalVAE,
+    ContinuousVFunction,
+    ContinuousMeanVFunction,
     DeterministicPolicy,
     DeterministicRegressor,
     DeterministicResidualPolicy,
     DiscreteImitator,
     EnsembleContinuousQFunction,
     EnsembleDiscreteQFunction,
-    NonSquashedNormalPolicy,
+    EnsembleContinuousVFunction,
     Parameter,
+    NonSquashedNormalPolicy,
     ProbabilisticDynamicsModel,
+    DoneModel,
     ProbabilisticEnsembleDynamicsModel,
     ProbablisticRegressor,
     SquashedNormalPolicy,
@@ -196,6 +201,44 @@ def create_value_function(
     encoder = encoder_factory.create(observation_shape)
     return ValueFunction(encoder)
 
+def create_continuous_v_function(
+    observation_shape: Sequence[int],
+    encoder_factory: EncoderFactory,
+    v_func_factory: VFunctionFactory,
+    n_ensembles: int = 2,
+) -> EnsembleContinuousVFunction:
+    if v_func_factory.share_encoder:
+        encoder = encoder_factory.create(
+            observation_shape
+        )
+        # normalize gradient scale by ensemble size
+        for p in cast(nn.Module, encoder).parameters():
+            p.register_hook(lambda grad: grad / n_ensembles)
+
+    v_funcs = []
+    for _ in range(n_ensembles):
+        if not v_func_factory.share_encoder:
+            encoder = encoder_factory.create(
+                observation_shape
+            )
+        v_funcs.append(v_func_factory.create_continuous(encoder))
+    return EnsembleContinuousVFunction(
+        v_funcs, bootstrap=v_func_factory.bootstrap
+    )
+
+
+def create_v_function(
+    observation_shape: Sequence[int],
+    encoder_factory: EncoderFactory,
+    v_func_factory: VFunctionFactory,
+) -> ContinuousVFunction:
+    encoder = encoder_factory.create(
+        observation_shape
+    )
+
+    return v_func_factory.create_continuous(encoder)
+
+
 
 def create_probabilistic_ensemble_dynamics_model(
     observation_shape: Sequence[int],
@@ -219,3 +262,29 @@ def create_probabilistic_ensemble_dynamics_model(
 def create_parameter(shape: Sequence[int], initial_value: float) -> Parameter:
     data = torch.full(shape, initial_value, dtype=torch.float32)
     return Parameter(data)
+def create_probabilistic_ensemble_dynamics_model(
+    observation_shape: Sequence[int],
+    action_size: int,
+    encoder_factory: EncoderFactory,
+    n_ensembles: int = 5,
+    discrete_action: bool = False,
+) -> ProbabilisticEnsembleDynamicsModel:
+    models = []
+    for _ in range(n_ensembles):
+        encoder = encoder_factory.create_with_action(
+            observation_shape=observation_shape,
+            action_size=action_size,
+            discrete_action=discrete_action,
+        )
+        model = ProbabilisticDynamicsModel(encoder)
+        models.append(model)
+    return ProbabilisticEnsembleDynamicsModel(models)
+def create_done_model(
+    observation_shape: Sequence[int],
+    action_size: int,
+):
+    network= mlp(observation_shape[0]+action_size,512,1,2)
+    return DoneModel(network)
+
+
+

@@ -11,6 +11,7 @@ from . import (
     dynamics,
     envs,
     metrics,
+    metrics2,
     models,
     online,
     ope,

@@ -1,7 +1,6 @@
 from .dynamics import (
     ProbabilisticDynamicsModel,
     ProbabilisticEnsembleDynamicsModel,
-    DoneModel,
 )
 from .encoders import (
     Encoder,
@@ -54,17 +53,6 @@ from .q_functions.qr_q_function import (
     ContinuousQRQFunction,
     DiscreteQRQFunction,
 )
-
-from .V_functions.mean_v_function import (
-    ContinuousMeanVFunction,
-)
-
-from .V_functions.ensemble_v_function import (
-    EnsembleVFunction,
-    EnsembleContinuousVFunction,
-)
-
-from .V_functions.base import ContinuousVFunction
 from .v_functions import ValueFunction
 
 __all__ = [
@@ -86,8 +74,6 @@ __all__ = [
     "EnsembleQFunction",
     "DiscreteMeanQFunction",
     "ContinuousMeanQFunction",
-    "ContinuousVFunction",
-    "ContinuousMeanVFunction"
     "DiscreteQRQFunction",
     "ContinuousQRQFunction",
     "DiscreteIQNQFunction",

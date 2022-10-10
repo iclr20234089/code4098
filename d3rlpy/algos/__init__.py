@@ -11,6 +11,7 @@ from .crr import CRR
 from .ddpg import DDPG
 from .dqn import DQN, DoubleDQN
 from .iql import IQL
+from .csve import CSVE
 from .mopo import MOPO
 from .nfq import NFQ
 from .plas import PLAS, PLASWithPerturbation

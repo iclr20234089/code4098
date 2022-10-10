@@ -1,0 +1,91 @@
+from typing import Optional, cast
+
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+from ..encoders import Encoder
+from .base import ContinuousVFunction
+from .utility import compute_huber_loss, compute_reduce, pick_value_by_action
+
+
+# class DiscreteMeanQFunction(DiscreteQFunction, nn.Module):  # type: ignore
+#     _action_size: int
+#     _encoder: Encoder
+#     _fc: nn.Linear
+#
+#     def __init__(self, encoder: Encoder, action_size: int):
+#         super().__init__()
+#         self._action_size = action_size
+#         self._encoder = encoder
+#         self._fc = nn.Linear(encoder.get_feature_size(), action_size)
+#
+#     def forward(self, x: torch.Tensor) -> torch.Tensor:
+#         return cast(torch.Tensor, self._fc(self._encoder(x)))
+#
+#     def compute_error(
+#         self,
+#         obs_t: torch.Tensor,
+#         act_t: torch.Tensor,
+#         rew_tp1: torch.Tensor,
+#         q_tp1: torch.Tensor,
+#         ter_tp1: torch.Tensor,
+#         gamma: float = 0.99,
+#         reduction: str = "mean",
+#     ) -> torch.Tensor:
+#         one_hot = F.one_hot(act_t.view(-1), num_classes=self.action_size)
+#         q_t = (self.forward(obs_t) * one_hot.float()).sum(dim=1, keepdim=True)
+#         y = rew_tp1 + gamma * q_tp1 * (1 - ter_tp1)
+#         loss = compute_huber_loss(q_t, y)
+#         return compute_reduce(loss, reduction)
+#
+#     def compute_target(
+#         self, x: torch.Tensor, action: Optional[torch.Tensor] = None
+#     ) -> torch.Tensor:
+#         if action is None:
+#             return self.forward(x)
+#         return pick_value_by_action(self.forward(x), action, keepdim=True)
+#
+#     @property
+#     def action_size(self) -> int:
+#         return self._action_size
+#
+#     @property
+#     def encoder(self) -> Encoder:
+#         return self._encoder
+
+
+class ContinuousMeanVFunction(ContinuousVFunction, nn.Module):  # type: ignore
+    _encoder: Encoder
+    _fc: nn.Linear
+
+    def __init__(self, encoder: Encoder):
+        super().__init__()
+        self._encoder = encoder
+        self._fc = nn.Linear(encoder.get_feature_size(), 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return cast(torch.Tensor, self._fc(self._encoder(x)))
+
+    def compute_error(
+        self,
+        observations: torch.Tensor,
+        rewards: torch.Tensor,
+        target: torch.Tensor,
+        terminals: torch.Tensor,
+        gamma: float = 0.99,
+        reduction: str = "mean",
+    ) -> torch.Tensor:
+        value = self.forward(observations) 
+        y = rewards + gamma * target * (1 - terminals)
+        loss = compute_huber_loss(value, y)
+        return compute_reduce(loss, reduction)
+
+    def compute_target(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
+        return self.forward(x)
+
+    @property
+    def encoder(self) -> Encoder:
+        return self._encoder

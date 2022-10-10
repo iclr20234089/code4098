@@ -8,19 +8,7 @@ from torch import nn
 from torch.distributions import Normal
 from torch.nn.utils import spectral_norm
 
-from .encoders import EncoderWithAction, Encoder
-def mlp(input_dim, hidden_dim, output_dim, hidden_depth, output_mod=None):
-    if hidden_depth == 0:
-        mods = [nn.Linear(input_dim, output_dim)]
-    else:
-        mods = [nn.Linear(input_dim, hidden_dim), nn.ReLU(inplace=True)]
-        for i in range(hidden_depth - 1):
-            mods += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU(inplace=True)]
-        mods.append(nn.Linear(hidden_dim, output_dim))
-    if output_mod is not None:
-        mods.append(output_mod)
-    trunk = nn.Sequential(*mods)
-    return trunk
+from .encoders import EncoderWithAction
 
 
 def _compute_ensemble_variance(
@@ -156,62 +144,6 @@ class ProbabilisticDynamicsModel(nn.Module):  # type: ignore
         return loss.view(-1, 1)
 
 
-class DoneModel(nn.Module):  # type: ignore
-    """ done model.
-     SVG
-    """
-
-    network: mlp
-    _mu: nn.Linear
-    def __init__(self, network: mlp):
-        super().__init__()
-        self.network=network
-
-    def compute_stats(
-        self, x: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor]:
-        xaction = torch.cat((x, action),1)
-        h = self.network(xaction)
-        return h
-
-    def forward(
-        self, x: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor]:
-        return self.predict_done(x, action)
-
-    def predict_done(
-        self, x: torch.Tensor, action: torch.Tensor
-    ) -> torch.tensor:
-        done = self.compute_stats(x, action)
-
-        return done
-    def perdict_done_sigmoid(
-        self, x: torch.Tensor, action: torch.Tensor
-
-    ) -> torch.tensor:
-        done = self.compute_stats(x, action)
-        m = nn.Sigmoid()
-        a = m(done)
-
-        return a
-    def compute_error(
-        self,
-        obs_t: torch.Tensor,
-        act_t: torch.Tensor,
-        done_tp1: torch.Tensor,
-    ) -> torch.Tensor:
-        batch_size,_= obs_t.shape
-        done = self.compute_stats(obs_t, act_t)
-        n_done = torch.sum(done_tp1)
-        if n_done > 0.:
-            pos_weight = ( batch_size- n_done) / n_done
-        else:
-            pos_weight = torch.tensor(1.)
-        done_loss = F.binary_cross_entropy_with_logits(
-            done, done_tp1, pos_weight=pos_weight,
-            reduction='mean')
-
-        return done_loss
 class ProbabilisticEnsembleDynamicsModel(nn.Module):  # type: ignore
     _models: nn.ModuleList
 
