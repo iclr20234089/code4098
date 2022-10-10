@@ -1,8 +1,8 @@
 This is the implementation of Effective Offline Reinforcement Learning via Conservative State Value Estimation
-We largely follow the implementaion in [d3rlpy](https://github.com/takuseno/d3rlpy/tree/61e6c00adc3fd0548e83500cc537ee0d27939a3f)
+We largely follow the implementaion in [d3rlpy](https://github.com/takuseno/d3rlpy/commit/1ac85b9955408b5e3e9f67ec6592828d8021885b)
 
 ## installation
-Check **Install form source## in [Installation of d3rlpy](https://d3rlpy.readthedocs.io/en/v1.1.1/installation.html)
+Check **Install form source** in [Installation of d3rlpy](https://d3rlpy.readthedocs.io/en/v1.1.1/installation.html)
 
 ## quick start
 When using our code, you should first run
